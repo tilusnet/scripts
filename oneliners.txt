@@ -1,0 +1,7 @@
+
+o) Remove all wildcarded files from current subtree 
+   E.g. all '*.bak' files
+
+	$ find . -name *.bak -type f -exec rm {} \;
+
+
