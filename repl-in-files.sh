@@ -5,6 +5,7 @@
 
 if [ $# -lt 2 ]; then
 	echo "Usage: `basename $0` <oldText> <NewText> [-b]"
+	exit 1
 fi
 
 oldText=$1
