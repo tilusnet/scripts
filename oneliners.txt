@@ -4,4 +4,6 @@ o) Remove all wildcarded files from current subtree
 
 	$ find . -name *.bak -type f -exec rm {} \;
 
+o) Start a VPN configuration from command line, i.e. 'Fluency Labs':
 
+	$ nmcli con up id "Fluency Labs"

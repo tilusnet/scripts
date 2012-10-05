@@ -3,6 +3,7 @@
 # Replaces all occurrences of $1 with $2 in all files under the current folder.
 # -b adds backup support
 
+set -x
 if [ $# -lt 2 ]; then
 	echo "Usage: `basename $0` <oldText> <NewText> [-b]"
 	exit 1
@@ -16,5 +17,5 @@ else
 	bckpsett=
 fi
 
-sed -i${bckpsett} 's/'${oldText}'/'${newText}'/g' `find . -type f`
+sed -i${bckpsett} "s/"${oldText}"/"${newText}"/g" `find . -type f`
 
