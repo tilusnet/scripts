@@ -1,0 +1,14 @@
+# Make it available systemwide: copy to /usr/share/applications
+# For current user only: copy to ~/.local/share/applications
+
+[Desktop Entry]
+Name=Eclipse 
+Type=Application
+Exec=/opt/eclipse/eclipse
+Terminal=false
+Icon=/opt/eclipse/icon.xpm
+Comment=Integrated Development Environment
+NoDisplay=false
+Categories=Development;IDE
+Name[en]=Eclipse
+
