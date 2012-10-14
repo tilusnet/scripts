@@ -7,3 +7,9 @@ o) Remove all wildcarded files from current subtree
 o) Start a VPN configuration from command line, i.e. 'Fluency Labs':
 
 	$ nmcli con up id "Fluency Labs"
+	
+o) Find out where are files copied by a particular package:
+
+    $ dpkg -L <packagename>
+    
+    
