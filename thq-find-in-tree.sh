@@ -9,6 +9,7 @@
 
 if [ -z $3 ]; then
 	echo "Usage: `basename $0` <where> <what> <filepattern>"
+	exit 1
 fi
 
 #if [ -z "$3" ]; then
