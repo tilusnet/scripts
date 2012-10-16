@@ -5,12 +5,19 @@
 
 if [ $# -lt 2 ]; then
 	echo "Usage: `basename $0` <source-folder> <target-folder>"
-	echo "Note that <source-folder>'s content will be moved, not the folder itself (for which you can use plain 'mv'."
+	echo "Note that <source-folder>'s content will be moved, not the folder itself (for which you can use plain 'mv')."
 	exit 1
 fi
 
-src_folder=${1}
-dest_folder=$2
+# set -x
+
+pushd ${1}
+src_folder=`pwd`
+popd
+
+pushd ${2}
+dest_folder=`pwd`
+popd
 
 (shopt -s dotglob; cd "$src_folder" ;mv -- * "$dest_folder")
 
