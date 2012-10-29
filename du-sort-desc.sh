@@ -11,7 +11,7 @@ else
 	depth=1
 fi
 
-du -k -d ${depth} | sort -nr | awk '
+du -k --max-depth=${depth} | sort -nr | awk '
 	BEGIN {
 		split("KB,MB,GB,TB", Units, ",");
 	}
