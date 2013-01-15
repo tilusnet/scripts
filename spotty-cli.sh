@@ -1,6 +1,10 @@
 #!/bin/bash
 
-set -x
+# A five minute hack on a January Monday night - tilusnet
+# Inspired by a post of Keto - http://www.blogger.com/profile/13033574484995258560
+
+
+#set -x
 
 if [ -z "$1" ]; then
   echo "Usage: $(basename $0) <next|prev|pause>"
