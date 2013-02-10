@@ -9,19 +9,141 @@
 import sys
 import argparse
 import textwrap
+import shutil
 import logging
+import itertools
 import xml.etree.ElementTree as ET
 
 
+llevel = logging.INFO
 
 
 
-def handleCommandLine():
+class SVGUtil:
+
+     # Returns True if all values are within eps range from ref
+    def areWithinRange(self, values, ref, eps):
+        for v in values:
+            if abs(v - ref) > eps:
+                return False
+        return True
+
+
+
+class SVGParser:
+
+    def __init__(self, filename, explicit_svgns=False):
+
+        # Reuse logger
+        self.logger = logging.getLogger(__name__)
+
+        # Set default SVG namespace key
+        self.defns = 'svg' if explicit_svgns else ''
+
+        # Define list of vector shapes in SVG
+        # Ref.: http://www.w3.org/TR/SVG/intro.html#TermShape
+        self.shapes = ( 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon' )
+
+        # Define and register common namespaces used in SVG 
+        self.nspaces = {
+            self.defns: 'http://www.w3.org/2000/svg',
+            'dc': 'http://purl.org/dc/elements/1.1/',
+            'cc': 'http://creativecommons.org/ns#',
+            'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+            'sodipodi': 'http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd',
+            'inkscape': 'http://www.inkscape.org/namespaces/inkscape'
+        }
+        self._regNameSpaces()
+
+        # Parse input file
+        self.tree = ET.parse(filename)
+
+
+    def _regNameSpaces(self):
+        for ns in self.nspaces.items():
+            ET.register_namespace(ns[0], ns[1])
+
+    def _scaleHlpr(self, dimvalue, tag):
+        try:
+            newD = int(dimvalue)
+        except TypeError:
+            self.logger.exception("Dimension is not an integer.")
+            raise
+        oldD = self.tree.find("./[@" + tag + "]").get(tag)     # Suggested 'dot notation' used for broken ET v <=1.3
+        self.logger.debug("Old " + tag + " = [" + oldD + "]")
+
+        scaleD = round(newD / float(oldD), 3)
+        return scaleD
+
+    def _scaleTxt(self, scale):
+        if scale < 1:
+            return " will be shrinked to {0:.1f}% of the original.".format(scale * 100)
+        elif scale > 1:
+            return " will be expanded to {0:.1f}% of the original.".format(scale * 100)
+        else:
+            return " won't be scaled."
+
+
+
+    def getroot(self):
+        return self.tree
+
+    # Finds all elements. Elements within SVG context should be prefixed with 'svg:'.
+    def findall(self, xpath):
+        xpathP27 = xpath.replace('svg:', '{0}')
+        return self.tree.findall(xpathP27.format('{' + self.nspaces[self.defns] + '}'))
+
+    # Return the flattened, combined list of vector shape elements
+    def findallshapes(self):
+        allshapes = [self.findall('.//svg:' + s) for s in self.shapes]
+        return list(itertools.chain.from_iterable(allshapes))
+
+
+    def printElems(self):
+        for elem in self.tree.getiterator():
+            print elem
+            # print elem.tag, elem.attrib 
+
+    def write(self, outfile):
+        self.tree.write(outfile, encoding="UTF-8")
+
+    # Returns True if any real processing has been done, False otherwise
+    def scale(self, w, h):
+        sx = self._scaleHlpr(w, 'width')
+        if h:
+            sy = self._scaleHlpr(h, 'height')
+        else:
+            sy = sx
+
+        if not SVGUtil().areWithinRange((sx, sy), 1, .001):
+
+            self.logger.info("Width" + self._scaleTxt(sx))
+            self.logger.info("Height" + self._scaleTxt(sy))
+
+            # Collect all vector shapes
+            vShapes = self.findallshapes()
+            print len(vShapes)
+            # for vs in vShapes:
+            #     print vs.get('id')
+
+            # TODO-OR-NOT-TODO
+            
+
+            return True
+        else:
+            return False
+
+
+
+
+
+
+def handleCommandLine(logger):
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                      description=textwrap.dedent('''\
         Rescale an SVG file by altering the vector coordinates of its shape elements.
 
-        These particular SVG shapes might be affected: path, rect, cicrle, ellipse, line, polyline and polygon.
+        These particular SVG shapes might be affected: path, rect, circle, ellipse, line, polyline and polygon.
         [Source: http://www.w3.org/TR/SVG/intro.html#TermShape]
 
 
@@ -38,56 +160,20 @@ def handleCommandLine():
                         help="New height. If omitted scaling is proportional.")
 
     opt = parser.parse_args()
-    logging.debug("Input           = [" + opt.input + "]")
-    logging.debug("Output          = [" + opt.output + "]")
-    logging.debug("Required width  = [" + str(opt.width) + "]")
+    logger.debug("Input           = [" + opt.input + "]")
+    logger.debug("Output          = [" + opt.output + "]")
+    logger.debug("Required width  = [" + str(opt.width) + "]")
     if not opt.height:
         sH = "N/A"
     else:
         sH = str(opt.height)
-    logging.debug("Required height = [" + sH + "]")
+    logger.debug("Required height = [" + sH + "]")
 
     return opt
 
-def regnamespaces(nspaces):
-    for ns in nspaces.items():
-        ET.register_namespace(ns[0], ns[1])
 
 
-def printXmlTree(tree):
-    for elem in tree.getiterator():
-        print elem
-        # print elem.tag, elem.attrib    
 
-
-# Returns True if all values are within eps range from ref
-def areWithinRange(values, ref, eps):
-    for v in values:
-        if abs(v - ref) > eps:
-            return False
-    return True
-
-
-def calcWidthHeightScale(xtree, opt):
-    sx = sy = 1
-
-    xOldW = xtree.find("./[@width]")  # Suggested syntax for broken ET v <=1.3
-    xOldH = xtree.find("./[@height]") # Suggested syntax for broken ET v <=1.3
-    oldW = xOldW.get('width')
-    oldH = xOldH.get('height')
-    logging.debug("OldW = [" + oldW + "]")
-    logging.debug("OldH = [" + oldH + "]")
-
-    sx = round(float(opt.width) / float(oldW), 3)
-    if opt.height:
-        sy = round(float(opt.height) / float(oldH), 3)
-    else:
-        sy = sx
-    
-    logging.info("ScaleX = [" + str(sx) + "]")
-    logging.info("ScaleY = [" + str(sy) + "]")
-
-    return sx, sy
 
 
 
@@ -98,54 +184,29 @@ def main():
         raise NotImplementedError("This program requires Python 2.7+.")
         sys.exit(1)
 
-    nspaces = {
-                  'dc': 'http://purl.org/dc/elements/1.1/',
-                  'cc': 'http://creativecommons.org/ns#',
-                  'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
-                  '': 'http://www.w3.org/2000/svg',
-                  'sodipodi': 'http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd',
-                  'inkscape': 'http://www.inkscape.org/namespaces/inkscape'
-              }
-    defns = '{' + nspaces[''] + '}'
-
-    # Parse command line
-    opt = handleCommandLine()
-
     # Logging
     logging.basicConfig(format='%(levelname)s: %(message)s')
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(llevel)
+
+    # Parse command line
+    opt = handleCommandLine(logger)
 
     # Process SVG
-    regnamespaces(nspaces)
-    xtree = ET.parse(opt.input)
-    print xtree
+    svg = SVGParser(opt.input)
 
     if logger.isEnabledFor(logging.DEBUG):
-        printXmlTree(xtree)
+        svg.printElems()
 
-    # sx, sy = calcWidthHeightScale(xtree, opt)
+    reprocessed = svg.scale(opt.width, opt.height)
 
-    # if not areWithinRange((sx, sy), 1, .001):
-    #     print "do the work"
+    if reprocessed:
+        svg.write(opt.output)
+    else:
+        # Copying input to ouput
+        shutil.copy2(opt.input, opt.output)
+        logger.info('Scale is below minimum threshold. Output is identical to input.')
 
-    # Collect all vector shapes
-    vShapes = xtree.findall('./{0}metadata'.format(defns))
-    # vShapes = xtree.findtext("path", "hubba")
-    print len(vShapes)
-    for vs in vShapes:
-        print vs.get('id')
-
-
-    # xtree.write(opt.output, encoding="UTF-8", xml_declaration=True)
-    xtree.write(opt.output, encoding="UTF-8")
-
-
-
-    # Determine factor; we'll use width only 
-    # Python 2.6.6 doesn't understand XPath with conditions unfortunately 
-    # ghurl = xmltree.find("scm[@class='hudson.plugins.git.GitSCM']/userRemoteConfigs/hudson.plugins.git.UserRemoteConfig/url")
-    # ghurl = xmltree.find("scm/userRemoteConfigs/hudson.plugins.git.UserRemoteConfig/url")
 
 
 
