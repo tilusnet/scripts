@@ -2,14 +2,13 @@
 # Finds text in all files in a given folder.
 #   $1 = where
 #   $2 = what
-#   $3 = file pattern filter (optional)
-# e.g. $basename "." "nlp" "*.sh"
+#   $3 = file pattern filter
 
 # set -x
 
 if [ -z "$3" ]; then
 	echo "Usage: `basename $0` <where> <what> <filepattern>"
-	echo " E.g.: `basename $0` \".\" \"nlp\" \"*.sh\""
+	echo " E.g.: `basename $0` . nlp *.sh"
 	exit 1
 fi
 
