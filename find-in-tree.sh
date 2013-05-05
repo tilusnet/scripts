@@ -8,7 +8,8 @@
 
 if [ -z "$3" ]; then
 	echo "Usage: `basename $0` <where> <what> <filepattern>"
-	echo " E.g.: `basename $0` . nlp *.sh"
+	echo " (note: wildcard characters should be escaped, alternatively surround parameter with quotes)"
+	echo " E.g.: `basename $0` . nlp \\*.sh "
 	exit 1
 fi
 
